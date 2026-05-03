@@ -540,6 +540,23 @@ function updateRepasBtn() {
 }
 
 // ── Health alerts ──────────────────────────────────────────────────────────────
+const SHEETS_URL = "https://script.google.com/macros/s/AKfycbwrLuiGhmMWJoQfHr48NlrozAHT0hPRHCzeCjArzNhRotexwLtaYUf4ER2wooeyR04W/exec";
+
+async function syncToSheets(data) {
+  try {
+    await fetch(SHEETS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    return true;
+  } catch(e) {
+    console.error("Sync error:", e);
+    return false;
+  }
+}
+
 const ALERTS = [
   { kw:["pain blanc","pain","baguette"], txt:"Pain blanc : index glycémique élevé — préférer pain complet.", lvl:"warning", source:"Table des IG — Université de Sydney", url:"https://www.glycemicindex.com" },
   { kw:["sucre","soda","coca","jus","sirop","gâteau","biscuit","chocolat","bonbon","miel"], txt:"Sucre rapide : pic glycémique immédiat — à éviter avec pré-diabète.", lvl:"danger", source:"ADA — Nutrition et diabète", url:"https://www.diabetes.org/healthy-living/recipes-nutrition" },
@@ -636,6 +653,18 @@ function confirmRepas() {
   const entry = {type:"repas", date:now.toLocaleDateString("fr-FR"), time:repasTimeOverride||now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}), parsed:currentParsedRepas, photos:photos.map(p=>p.preview), alerts:currentAlertsRepas.map(a=>a.txt)};
   log.unshift(entry); if(log.length>80)log.pop();
   try{localStorage.setItem("hl",JSON.stringify(log));}catch{}
+  // Sync to Google Sheets
+  syncToSheets({
+    type: "repas",
+    date: entry.date,
+    time: entry.time,
+    repas: currentParsedRepas?.repas || "",
+    aliments: currentParsedRepas?.aliments || "",
+    quantite: currentParsedRepas?.quantite || "",
+    calories: currentParsedRepas?.calories || "",
+    alerts: currentAlertsRepas.map(a=>a.txt).join(" | "),
+    notes: currentParsedRepas?.notes || ""
+  });
   document.getElementById("repas-result").classList.add("hidden");
   document.getElementById("repas-success").classList.remove("hidden");
   setTimeout(resetRepas, 2000);
@@ -658,6 +687,8 @@ function saveSommeil() {
   const entry = {type:"sommeil", date, bed, wake1, back, up, quality:currentSleepQuality, notes};
   log.unshift(entry); if(log.length>80)log.pop();
   try{localStorage.setItem("hl",JSON.stringify(log));}catch{}
+  // Sync to Google Sheets
+  syncToSheets({ type:"sommeil", date, bed, wake1, back, up, quality:currentSleepQuality, notes });
   document.getElementById("sleep-success").classList.remove("hidden");
   setTimeout(() => document.getElementById("sleep-success").classList.add("hidden"), 2000);
 }
@@ -685,6 +716,8 @@ function confirmMesures() {
   const entry = {type:"mesures", date:now.toLocaleDateString("fr-FR"), time:now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}), parsed:currentParsedMesures};
   log.unshift(entry); if(log.length>80)log.pop();
   try{localStorage.setItem("hl",JSON.stringify(log));}catch{}
+  // Sync to Google Sheets
+  syncToSheets({ type:"mesures", date:entry.date, time:entry.time, parsed:currentParsedMesures });
   document.getElementById("mesures-result").classList.add("hidden");
   document.getElementById("mesures-success").classList.remove("hidden");
   document.getElementById("mesures-input").value = "";
