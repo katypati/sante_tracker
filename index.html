@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Suivi Santé</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system,'SF Pro Display','Helvetica Neue',sans-serif; background:#F8F8F8; color:#111; min-height:100vh; }
+
+#topbar { background:#fff; border-bottom:1px solid #F0F0F0; position:sticky; top:0; z-index:10; }
+#topbar-inner { max-width:480px; margin:0 auto; padding:16px 20px 0; }
+#topbar-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+.t-sub { font-size:11px; font-weight:600; letter-spacing:1.5px; color:#BABABA; text-transform:uppercase; margin-bottom:2px; }
+.t-title { font-size:20px; font-weight:700; letter-spacing:-0.5px; }
+#topbar-date { font-size:11px; color:#BABABA; text-align:right; margin-bottom:1px; }
+#topbar-time { font-size:16px; font-weight:700; color:#2ECC71; text-align:right; }
+#tabs { display:flex; overflow-x:auto; scrollbar-width:none; }
+#tabs::-webkit-scrollbar { display:none; }
+.tab-btn { flex-shrink:0; padding:10px 10px 12px; border:none; background:none; cursor:pointer; font-family:inherit; font-size:12px; font-weight:500; color:#BABABA; border-bottom:2px solid transparent; white-space:nowrap; transition:all 0.15s; }
+.tab-btn.active { font-weight:700; color:#111; border-bottom-color:#111; }
+
+#body { max-width:480px; margin:0 auto; padding:20px 16px 80px; }
+.section { margin-bottom:20px; }
+.section-label { font-size:10px; font-weight:700; letter-spacing:2px; color:#BABABA; text-transform:uppercase; margin-bottom:10px; }
+.card { background:#fff; border-radius:16px; border:1px solid #EFEFEF; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden; }
+.hidden { display:none !important; }
+
+/* Photo buttons */
+.photo-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.photo-btn { padding:14px 10px; background:#fff; border:1.5px solid #E8E8E8; border-radius:14px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:6px; width:100%; transition:border-color 0.15s; }
+.photo-btn:active { border-color:#111; }
+.photo-btn .icon { font-size:24px; }
+.photo-btn .lbl { font-size:12px; font-weight:600; color:#444; }
+#photo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
+.photo-thumb { position:relative; border-radius:12px; overflow:hidden; aspect-ratio:1; }
+.photo-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+.photo-remove { position:absolute; top:5px; right:5px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(0,0,0,0.55); color:#fff; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:700; }
+
+textarea { width:100%; background:transparent; border:none; outline:none; resize:vertical; font-family:inherit; font-size:14px; color:#111; padding:14px; line-height:1.6; display:block; }
+
+/* Time row */
+.time-row { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; flex-wrap:wrap; gap:8px; }
+.time-left { display:flex; align-items:center; gap:8px; }
+.time-lbl { font-size:13px; color:#BABABA; font-weight:500; }
+.time-val { font-size:16px; font-weight:700; color:#111; }
+.time-edit-btn { background:none; border:1.5px solid #E8E8E8; border-radius:8px; font-size:11px; color:#888; padding:4px 10px; cursor:pointer; font-family:inherit; font-weight:600; }
+input[type=time] { border:1.5px solid #111; border-radius:8px; background:#fff; font-family:inherit; font-size:13px; font-weight:700; padding:4px 8px; color:#111; outline:none; }
+.mic-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; background:#F2F2F2; border:1.5px solid #E8E8E8; border-radius:100px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.mic-btn.listening { background:#FFF0F0; border-color:#E74C3C; }
+.mic-icon { font-size:16px; }
+.mic-lbl { font-size:12px; font-weight:600; color:#555; }
+.mic-btn.listening .mic-lbl { color:#E74C3C; }
+
+.analyze-btn { width:100%; padding:15px; border-radius:14px; border:none; background:#111; color:#fff; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; margin-bottom:16px; transition:all 0.15s; }
+.analyze-btn:disabled { background:#E8E8E8; color:#BABABA; cursor:default; }
+
+.error-box { background:#FFF0F0; border:1px solid #FFD6D6; border-radius:14px; padding:14px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.error-box span { font-size:13px; color:#C0392B; }
+.retry-btn { background:#C0392B; border:none; border-radius:8px; color:#fff; font-size:11px; font-weight:700; padding:5px 12px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+
+/* Alerts with sources */
+.alert-item { border-radius:12px; padding:11px 13px; margin-bottom:8px; border:1px solid; }
+.alert-header { display:flex; align-items:flex-start; gap:10px; }
+.alert-dot { width:20px; height:20px; border-radius:50%; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.alert-text { font-size:13px; line-height:1.5; flex:1; }
+.alert-source { margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,0.06); display:flex; align-items:center; gap:6px; }
+.source-tag { font-size:10px; font-weight:700; letter-spacing:0.5px; padding:3px 8px; border-radius:100px; background:rgba(0,0,0,0.06); }
+.source-link { font-size:11px; color:#0066CC; text-decoration:none; font-weight:600; }
+
+/* Result */
+.result-card { background:#fff; border-radius:16px; border:1px solid #EFEFEF; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:16px; margin-bottom:14px; }
+.result-row { display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+.result-lbl { font-size:11px; font-weight:700; color:#BABABA; width:76px; flex-shrink:0; padding-top:2px; text-transform:uppercase; letter-spacing:0.5px; }
+.result-val { font-size:14px; color:#111; line-height:1.5; flex:1; }
+.mesure-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.mesure-cell { background:#F8F8F8; border-radius:12px; padding:12px; }
+.mc-lbl { font-size:10px; font-weight:700; color:#BABABA; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+.mc-val { font-size:18px; font-weight:800; color:#111; }
+.mc-unit { font-size:12px; font-weight:500; color:#BABABA; margin-left:3px; }
+.result-actions { display:flex; gap:8px; margin-top:16px; }
+.cancel-btn { flex:1; padding:12px; background:#F2F2F2; border:none; border-radius:12px; font-size:13px; font-weight:600; color:#888; font-family:inherit; cursor:pointer; }
+.confirm-btn { flex:2; padding:12px; background:#111; border:none; border-radius:12px; font-size:13px; font-weight:700; color:#fff; font-family:inherit; cursor:pointer; }
+
+.success-box { background:#F0FFF4; border:1px solid #C6F0D3; border-radius:14px; padding:18px; text-align:center; }
+.success-icon { font-size:28px; margin-bottom:6px; }
+.success-text { font-size:14px; font-weight:700; color:#1A7A3A; }
+
+/* History */
+.history-card { background:#fff; border-radius:16px; border:1px solid #EFEFEF; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden; margin-bottom:10px; }
+.history-photos { display:grid; gap:2px; }
+.history-photos img { width:100%; object-fit:cover; display:block; }
+.history-body { padding:12px 14px; }
+.history-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.pill { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:100px; background:#F2F2F2; color:#666; font-size:11px; font-weight:600; }
+.history-dt { font-size:11px; color:#BABABA; }
+.h-title { font-size:14px; font-weight:700; margin-bottom:3px; }
+.h-sub { font-size:13px; color:#555; line-height:1.5; }
+.h-kcal { font-size:12px; color:#BABABA; margin-top:4px; font-weight:600; }
+#empty-state { text-align:center; padding:80px 0; color:#BABABA; font-size:14px; }
+
+/* Sleep tab */
+.sleep-field { margin-bottom:14px; }
+.sleep-field label { font-size:11px; font-weight:700; color:#BABABA; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px; }
+.sleep-input { width:100%; background:#fff; border:1.5px solid #E8E8E8; border-radius:12px; padding:12px 14px; font-family:inherit; font-size:14px; color:#111; outline:none; transition:border-color 0.15s; }
+.sleep-input:focus { border-color:#111; }
+.sleep-quality { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.sq-btn { padding:12px 6px; border:1.5px solid #E8E8E8; border-radius:12px; background:#fff; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; color:#888; text-align:center; transition:all 0.15s; }
+.sq-btn.selected { border-color:#111; background:#111; color:#fff; }
+
+/* Documentation tab */
+.doc-card { background:#fff; border-radius:16px; border:1px solid #EFEFEF; margin-bottom:10px; overflow:hidden; }
+.doc-header { padding:14px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.doc-title { font-size:14px; font-weight:700; }
+.doc-tag { font-size:10px; font-weight:700; padding:3px 10px; border-radius:100px; }
+.doc-body { padding:0 16px 14px; display:none; }
+.doc-body.open { display:block; }
+.doc-point { display:flex; gap:10px; margin-bottom:10px; align-items:flex-start; }
+.doc-bullet { width:6px; height:6px; border-radius:50%; background:#111; flex-shrink:0; margin-top:6px; }
+.doc-point-text { font-size:13px; color:#333; line-height:1.6; }
+.doc-source { margin-top:10px; padding-top:10px; border-top:1px solid #F0F0F0; }
+.doc-source a { font-size:12px; color:#0066CC; text-decoration:none; font-weight:600; display:block; margin-bottom:4px; }
+
+/* API key */
+#apikey-section { background:#FFFBF0; border:1px solid #FFE8B0; border-radius:16px; padding:16px; margin-bottom:20px; }
+.ak-title { font-size:13px; font-weight:700; color:#9A6700; margin-bottom:8px; }
+.ak-desc { font-size:12px; color:#9A6700; line-height:1.5; margin-bottom:10px; }
+#apikey-input { width:100%; border:1.5px solid #FFE8B0; border-radius:10px; padding:10px 12px; font-family:inherit; font-size:13px; color:#111; background:#fff; outline:none; margin-bottom:8px; }
+#apikey-save { background:#9A6700; border:none; border-radius:10px; color:#fff; font-size:13px; font-weight:700; padding:10px 20px; cursor:pointer; font-family:inherit; width:100%; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div id="topbar-inner">
+    <div id="topbar-head">
+      <div><div class="t-sub">Mon Journal</div><div class="t-title">Suivi Santé</div></div>
+      <div><div id="topbar-date"></div><div id="topbar-time"></div></div>
+    </div>
+    <div id="tabs">
+      <button class="tab-btn active" data-tab="repas" onclick="switchTab('repas')">🍽 Repas</button>
+      <button class="tab-btn" data-tab="sommeil" onclick="switchTab('sommeil')">😴 Sommeil</button>
+      <button class="tab-btn" data-tab="mesures" onclick="switchTab('mesures')">📏 Mesures</button>
+      <button class="tab-btn" data-tab="historique" onclick="switchTab('historique')">📋 Historique</button>
+      <button class="tab-btn" data-tab="semaine" onclick="switchTab('semaine')">📊 Ma Semaine</button>
+      <button class="tab-btn" data-tab="docs" onclick="switchTab('docs')">📚 Docs</button>
+    </div>
+  </div>
+</div>
+
+<div id="body">
+
+  <!-- API Key -->
+  <div id="apikey-section">
+    <div class="ak-title">🔑 Clé API Anthropic requise</div>
+    <div class="ak-desc">Pour l'analyse IA de tes repas, entre ta clé API Anthropic. Elle est stockée uniquement sur ton appareil.<br><br>Obtiens-la sur <strong>console.anthropic.com</strong> → API Keys → Create Key.</div>
+    <input id="apikey-input" type="password" placeholder="sk-ant-...">
+    <button id="apikey-save" onclick="saveApiKey()">Enregistrer</button>
+  </div>
+
+  <!-- ── REPAS ── -->
+  <div id="tab-repas">
+    <div class="section">
+      <div class="section-label">Photos</div>
+      <div id="photo-grid"></div>
+      <div class="photo-btns">
+        <button class="photo-btn" onclick="document.getElementById('cam-in').click()">
+          <span class="icon">📷</span><span class="lbl">Prendre une photo</span>
+        </button>
+        <button class="photo-btn" onclick="document.getElementById('gal-in').click()">
+          <span class="icon">🖼</span><span class="lbl">Choisir dans la galerie</span>
+        </button>
+      </div>
+      <input id="cam-in" type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="handleFiles(this.files)">
+      <input id="gal-in" type="file" accept="image/*" multiple style="display:none" onchange="handleFiles(this.files)">
+    </div>
+
+    <div class="section">
+      <div class="section-label">Description (optionnel si photo)</div>
+      <div class="card"><textarea id="repas-input" rows="3" placeholder="Ex : 2 œufs sur le plat, pain, thé menthe sans sucre, eau..." oninput="updateRepasBtn()"></textarea></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Heure &amp; vocal</div>
+      <div class="card">
+        <div class="time-row">
+          <div class="time-left">
+            <span class="time-lbl">Heure</span>
+            <span id="r-time-val" class="time-val"></span>
+            <input id="r-time-in" type="time" class="hidden" oninput="repasTimeOverride=this.value;document.getElementById('r-time-val').textContent=this.value">
+            <button class="time-edit-btn" onclick="toggleTimeEdit('r')">Modifier</button>
+          </div>
+          <button class="mic-btn" id="mic-btn" onmousedown="startListening()" onmouseup="stopListening()" ontouchstart="startListening()" ontouchend="stopListening()">
+            <span class="mic-icon">🎤</span><span class="mic-lbl">Vocal</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <button class="analyze-btn" id="repas-analyze-btn" onclick="handleAnalyzeRepas()" disabled>Analyser →</button>
+    <div id="repas-error" class="error-box hidden"><span id="repas-err-txt">❌</span><button class="retry-btn" onclick="handleAnalyzeRepas()">Réessayer</button></div>
+    <div id="alerts-section" class="section hidden"><div class="section-label">Alertes santé</div><div id="alerts-list"></div></div>
+    <div id="repas-result" class="result-card hidden">
+      <div class="section-label" style="margin-bottom:12px">Résumé détecté</div>
+      <div id="repas-result-content"></div>
+      <div class="result-actions">
+        <button class="cancel-btn" onclick="resetRepas()">Annuler</button>
+        <button class="confirm-btn" onclick="confirmRepas()">✓ Confirmer &amp; Enregistrer</button>
+      </div>
+    </div>
+    <div id="repas-success" class="success-box hidden"><div class="success-icon">✓</div><div class="success-text">Enregistré avec succès</div></div>
+  </div>
+
+  <!-- ── SOMMEIL ── -->
+  <div id="tab-sommeil" class="hidden">
+    <div class="section">
+      <div class="section-label">Nuit du</div>
+      <div class="card" style="padding:14px">
+        <div class="sleep-field">
+          <label>Date de la nuit</label>
+          <input id="sleep-date" type="date" class="sleep-input">
+        </div>
+        <div class="sleep-field">
+          <label>Heure de coucher</label>
+          <input id="sleep-bed" type="time" class="sleep-input" placeholder="00:00">
+        </div>
+        <div class="sleep-field">
+          <label>Réveil(s) nocturne(s) — heure si applicable</label>
+          <input id="sleep-wake1" type="time" class="sleep-input" placeholder="Pas de réveil">
+        </div>
+        <div class="sleep-field">
+          <label>Retour au sommeil après réveil</label>
+          <input id="sleep-back" type="time" class="sleep-input" placeholder="Si applicable">
+        </div>
+        <div class="sleep-field">
+          <label>Réveil final</label>
+          <input id="sleep-up" type="time" class="sleep-input">
+        </div>
+        <div class="sleep-field">
+          <label>Qualité ressentie</label>
+          <div class="sleep-quality">
+            <button class="sq-btn" onclick="selectQuality(this,'😴 Mauvaise')">😴 Mauvaise</button>
+            <button class="sq-btn" onclick="selectQuality(this,'😐 Moyenne')">😐 Moyenne</button>
+            <button class="sq-btn" onclick="selectQuality(this,'😊 Bonne')">😊 Bonne</button>
+          </div>
+        </div>
+        <div class="sleep-field">
+          <label>Notes libres</label>
+          <textarea id="sleep-notes" class="sleep-input" rows="2" style="resize:vertical" placeholder="Ex : difficile à m'endormir, rêves agités..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sleep tips with sources -->
+    <div class="section">
+      <div class="section-label">Impact du sommeil sur ta santé</div>
+      <div class="alert-item" style="background:#F0F7FF;border-color:#C8DEFF">
+        <div class="alert-header">
+          <div class="alert-dot" style="background:#3498DB">i</div>
+          <div>
+            <div class="alert-text" style="color:#1A5FAB">Un sommeil fragmenté ou insuffisant augmente la résistance à l'insuline et aggrave le pré-diabète.</div>
+            <div class="alert-source">
+              <span class="source-tag" style="color:#1A5FAB">OMS / ADA</span>
+              <a href="https://diabetesjournals.org/care/article/43/Supplement_1/S77/30766" target="_blank" class="source-link">→ American Diabetes Association</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alert-item" style="background:#FFFBF0;border-color:#FFE8B0">
+        <div class="alert-header">
+          <div class="alert-dot" style="background:#F39C12">!</div>
+          <div>
+            <div class="alert-text" style="color:#874d00">Moins de 6h de sommeil par nuit est associé à une augmentation du mauvais cholestérol (LDL).</div>
+            <div class="alert-source">
+              <span class="source-tag" style="color:#874d00">Étude clinique</span>
+              <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4400203/" target="_blank" class="source-link">→ NIH / National Library of Medicine</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alert-item" style="background:#F0FFF4;border-color:#C6F0D3">
+        <div class="alert-header">
+          <div class="alert-dot" style="background:#27AE60">✓</div>
+          <div>
+            <div class="alert-text" style="color:#1A7A3A">7 à 9 heures de sommeil par nuit est la recommandation pour les adultes. Viser une heure de coucher régulière aide à stabiliser la glycémie.</div>
+            <div class="alert-source">
+              <span class="source-tag" style="color:#1A7A3A">NSF</span>
+              <a href="https://www.sleepfoundation.org/how-sleep-works/how-much-sleep-do-we-really-need" target="_blank" class="source-link">→ National Sleep Foundation</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="analyze-btn" onclick="saveSommeil()">Enregistrer le sommeil →</button>
+    <div id="sleep-success" class="success-box hidden"><div class="success-icon">✓</div><div class="success-text">Sommeil enregistré</div></div>
+  </div>
+
+  <!-- ── MESURES ── -->
+  <div id="tab-mesures" class="hidden">
+    <div class="section">
+      <div class="section-label">Tes mesures du jour</div>
+      <div class="card"><textarea id="mesures-input" rows="5" placeholder="Ex : poids 85 kg, tour de taille 103 cm, tour de hanches 112 cm, bras 36 cm, mollets 36 cm..."></textarea></div>
+    </div>
+    <button class="analyze-btn" onclick="handleAnalyzeMesures()">Analyser →</button>
+    <div id="mesures-error" class="error-box hidden"><span id="mesures-err-txt">❌</span><button class="retry-btn" onclick="handleAnalyzeMesures()">Réessayer</button></div>
+    <div id="mesures-result" class="result-card hidden">
+      <div class="section-label" style="margin-bottom:12px">Résumé détecté</div>
+      <div id="mesures-result-content" class="mesure-grid"></div>
+      <div class="result-actions">
+        <button class="cancel-btn" onclick="document.getElementById('mesures-result').classList.add('hidden')">Annuler</button>
+        <button class="confirm-btn" onclick="confirmMesures()">✓ Confirmer &amp; Enregistrer</button>
+      </div>
+    </div>
+    <div id="mesures-success" class="success-box hidden"><div class="success-icon">✓</div><div class="success-text">Enregistré avec succès</div></div>
+  </div>
+
+  <!-- ── HISTORIQUE ── -->
+  <div id="tab-historique" class="hidden">
+    <div id="history-list"></div>
+    <div id="empty-state" class="hidden">Aucune entrée pour l'instant.</div>
+  </div>
+
+  <!-- ── MA SEMAINE ── -->
+  <div id="tab-semaine" class="hidden">
+    <div style="background:#F0F7FF;border:1px solid #C8DEFF;border-radius:16px;padding:16px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:#1A5FAB;margin-bottom:6px">📊 Analyse personnalisée</div>
+      <div style="font-size:12px;color:#1A5FAB;line-height:1.6">L'IA analyse tout ton historique (repas, sommeil, mesures) et génère un plan adapté à ta situation — avec alertes si nécessaire. Plus tu enregistres, plus le plan est précis.</div>
+    </div>
+    <button class="analyze-btn" id="semaine-btn" onclick="generateWeekPlan()">Générer mon plan de la semaine →</button>
+    <div id="semaine-error" class="error-box hidden"><span id="semaine-err-txt">❌</span><button class="retry-btn" onclick="generateWeekPlan()">Réessayer</button></div>
+    <div id="semaine-result" class="hidden"><div id="semaine-content"></div></div>
+  </div>
+
+  <!-- ── DOCUMENTATION ── -->
+  <div id="tab-docs" class="hidden">
+
+    <div class="doc-card">
+      <div class="doc-header" onclick="toggleDoc(this)">
+        <div class="doc-title">🩸 Pré-diabète</div>
+        <div class="doc-tag" style="background:#FFF0F0;color:#C0392B">Important</div>
+      </div>
+      <div class="doc-body">
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Le pré-diabète signifie que ta glycémie est élevée mais pas encore au niveau du diabète de type 2. C'est réversible avec alimentation et activité physique.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Les aliments à index glycémique (IG) élevé font monter la glycémie rapidement : pain blanc, riz blanc, sucre, jus de fruits, chips.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Les aliments à IG bas stabilisent la glycémie : légumineuses, légumes verts, pain complet, fruits frais (sauf raisins et dattes).</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">30 minutes de marche rapide par jour réduit significativement la résistance à l'insuline.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Perdre 5 à 7% de son poids corporel réduit de 58% le risque de développer le diabète de type 2 (étude DPP, NIH).</div></div>
+        <div class="doc-source">
+          <a href="https://www.who.int/news-room/fact-sheets/detail/diabetes" target="_blank">→ OMS — Fiche diabète</a>
+          <a href="https://www.diabetes.org/diabetes/prediabetes" target="_blank">→ American Diabetes Association — Pré-diabète</a>
+          <a href="https://www.has-sante.fr/jcms/c_1022542/fr/strategie-medicamenteuse-du-controle-glycemique-du-diabete-de-type-2" target="_blank">→ HAS France — Contrôle glycémique</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-card">
+      <div class="doc-header" onclick="toggleDoc(this)">
+        <div class="doc-title">💛 Cholestérol</div>
+        <div class="doc-tag" style="background:#FFFBF0;color:#9A6700">À surveiller</div>
+      </div>
+      <div class="doc-body">
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Il existe deux types : LDL (mauvais cholestérol, bouche les artères) et HDL (bon cholestérol, protège le cœur). L'objectif est de baisser le LDL.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Les graisses saturées (viande rouge, charcuterie, fromages, beurre, huile de palme) augmentent le LDL.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Les graisses insaturées (poisson gras, avocat, arachides nature, huile d'olive) augmentent le HDL protecteur.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Les fibres solubles (avoine, légumineuses, pommes, carottes) réduisent l'absorption du cholestérol dans l'intestin.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Les œufs sont permis en modération (max 4–6/semaine) même avec du cholestérol élevé, selon les recommandations actuelles.</div></div>
+        <div class="doc-source">
+          <a href="https://www.heartuk.org.uk/cholesterol/understanding-cholesterol" target="_blank">→ HEART UK — Comprendre le cholestérol</a>
+          <a href="https://www.mayoclinic.org/diseases-conditions/high-blood-cholesterol/symptoms-causes/syc-20350800" target="_blank">→ Mayo Clinic — Cholestérol élevé</a>
+          <a href="https://www.federationfrancaisedecardiologie.fr/maladies-cardio-vasculaires/le-cholesterol/" target="_blank">→ Fédération Française de Cardiologie</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-card">
+      <div class="doc-header" onclick="toggleDoc(this)">
+        <div class="doc-title">⚖️ Perte de poids & IMC</div>
+        <div class="doc-tag" style="background:#F0F7FF;color:#1A5FAB">Référence</div>
+      </div>
+      <div class="doc-body">
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Un IMC entre 25 et 29.9 est considéré surpoids. Ton IMC actuel est de 29.3 — à la limite, réductible.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Le tour de taille est un meilleur indicateur de risque que le poids seul. Au-delà de 88 cm pour une femme, le risque cardio-métabolique augmente significativement.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Une perte de 0.5 à 1 kg par semaine est considérée saine et durable. Plus rapide = souvent repris.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Un déficit calorique de 500 kcal/jour permet de perdre environ 0.5 kg/semaine sans effort excessif.</div></div>
+        <div class="doc-source">
+          <a href="https://www.who.int/news-room/fact-sheets/detail/obesity-and-overweight" target="_blank">→ OMS — Obésité et surpoids</a>
+          <a href="https://www.nhlbi.nih.gov/health/educational/lose_wt/BMI/bmicalc.htm" target="_blank">→ NIH — Calculateur IMC</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-card">
+      <div class="doc-header" onclick="toggleDoc(this)">
+        <div class="doc-title">🏃 Activité physique</div>
+        <div class="doc-tag" style="background:#F0FFF4;color:#1A7A3A">Bénéfique</div>
+      </div>
+      <div class="doc-body">
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">L'OMS recommande 150 à 300 minutes d'activité modérée par semaine (ex : marche rapide, natation, vélo).</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">La marche rapide après les repas (15–20 min) réduit les pics glycémiques post-prandiaux — particulièrement utile avec le pré-diabète.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">La musculation légère 2x/semaine améliore la sensibilité à l'insuline et augmente le métabolisme de base.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Même 10 minutes de marche 3 fois par jour ont un impact mesurable sur la glycémie et le cholestérol.</div></div>
+        <div class="doc-source">
+          <a href="https://www.who.int/news-room/fact-sheets/detail/physical-activity" target="_blank">→ OMS — Activité physique</a>
+          <a href="https://www.diabetes.org/healthy-living/fitness" target="_blank">→ ADA — Sport et diabète</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-card">
+      <div class="doc-header" onclick="toggleDoc(this)">
+        <div class="doc-title">😴 Sommeil &amp; métabolisme</div>
+        <div class="doc-tag" style="background:#F0F7FF;color:#1A5FAB">Référence</div>
+      </div>
+      <div class="doc-body">
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Le manque de sommeil augmente le cortisol (hormone du stress), qui à son tour élève la glycémie à jeun.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Un sommeil fragmenté, même si la durée totale est correcte, réduit l'efficacité du sommeil profond où se fait la régulation hormonale.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text">Éviter les écrans 1h avant le coucher et maintenir une heure de coucher fixe améliore la qualité du sommeil.</div></div>
+        <div class="doc-source">
+          <a href="https://www.sleepfoundation.org/sleep-topics" target="_blank">→ National Sleep Foundation</a>
+          <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4400203/" target="_blank">→ NIH — Sommeil et métabolisme</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-card">
+      <div class="doc-header" onclick="toggleDoc(this)">
+        <div class="doc-title">🥗 Aliments recommandés</div>
+        <div class="doc-tag" style="background:#F0FFF4;color:#1A7A3A">À privilégier</div>
+      </div>
+      <div class="doc-body">
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text"><strong>Protéines :</strong> poisson (sardine, maquereau, thon), poulet sans peau, légumineuses (lentilles, haricots, pois chiches).</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text"><strong>Féculents :</strong> riz complet, pain complet, patate douce, quinoa — tous à IG plus bas que leurs équivalents blancs.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text"><strong>Fruits :</strong> clémentines, pommes, poires, fruits rouges (fraises, myrtilles) — éviter raisins, dattes, mangue en grande quantité.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text"><strong>Légumes :</strong> tous sans restriction — tomates, concombres, haricots verts, brocolis, carottes, épinards.</div></div>
+        <div class="doc-point"><div class="doc-bullet"></div><div class="doc-point-text"><strong>Graisses :</strong> huile d'olive, avocat, arachides nature, noix — en quantité raisonnable.</div></div>
+        <div class="doc-source">
+          <a href="https://www.diabetes.org/healthy-living/recipes-nutrition" target="_blank">→ ADA — Nutrition et diabète</a>
+          <a href="https://www.heartuk.org.uk/low-cholesterol-foods" target="_blank">→ HEART UK — Aliments anti-cholestérol</a>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end docs -->
+
+</div><!-- end body -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let photos = [], repasTimeOverride = "", repasEditingTime = false;
+let recognition = null, currentParsedRepas = null, currentAlertsRepas = [];
+let currentParsedMesures = null, currentSleepQuality = "";
+let log = [], apiKey = "";
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+(function init() {
+  updateClock(); setInterval(updateClock, 10000);
+  try { log = JSON.parse(localStorage.getItem("hl") || "[]"); } catch {}
+  apiKey = localStorage.getItem("apikey") || "";
+  if (apiKey) document.getElementById("apikey-section").classList.add("hidden");
+  // Set today's date in sleep form
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("sleep-date").value = today;
+})();
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById("topbar-date").textContent = now.toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+  const t = now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("topbar-time").textContent = repasTimeOverride || t;
+  document.getElementById("r-time-val").textContent = repasTimeOverride || t;
+}
+
+// ── API Key ────────────────────────────────────────────────────────────────────
+function saveApiKey() {
+  const v = document.getElementById("apikey-input").value.trim();
+  if (!v.startsWith("sk-ant-")) { alert("Clé invalide — elle doit commencer par sk-ant-"); return; }
+  apiKey = v; localStorage.setItem("apikey", v);
+  document.getElementById("apikey-section").classList.add("hidden");
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────────
+function switchTab(t) {
+  ["repas","sommeil","mesures","historique","semaine","docs"].forEach(id => {
+    document.getElementById("tab-"+id).classList.toggle("hidden", id !== t);
+    document.querySelector(`.tab-btn[data-tab="${id}"]`).classList.toggle("active", id === t);
+  });
+  if (t === "historique") renderHistory();
+}
+
+// ── Photos ─────────────────────────────────────────────────────────────────────
+function handleFiles(files) {
+  Array.from(files).forEach(f => {
+    const r = new FileReader();
+    r.onload = ev => { photos.push({preview:ev.target.result, data:ev.target.result.split(",")[1], mimeType:f.type}); renderPhotoGrid(); updateRepasBtn(); };
+    r.readAsDataURL(f);
+  });
+  document.getElementById("cam-in").value = "";
+  document.getElementById("gal-in").value = "";
+}
+function renderPhotoGrid() {
+  const g = document.getElementById("photo-grid");
+  g.innerHTML = photos.map((p,i) => `<div class="photo-thumb"><img src="${p.preview}"><button class="photo-remove" onclick="removePhoto(${i})">×</button></div>`).join("");
+}
+function removePhoto(i) { photos.splice(i,1); renderPhotoGrid(); updateRepasBtn(); }
+
+// ── Time edit ──────────────────────────────────────────────────────────────────
+function toggleTimeEdit(prefix) {
+  repasEditingTime = !repasEditingTime;
+  document.getElementById("r-time-val").classList.toggle("hidden", repasEditingTime);
+  document.getElementById("r-time-in").classList.toggle("hidden", !repasEditingTime);
+  document.querySelector(".time-edit-btn").textContent = repasEditingTime ? "OK" : "Modifier";
+  if (!repasEditingTime) { const v = document.getElementById("r-time-in").value; if (v) { repasTimeOverride = v; document.getElementById("r-time-val").textContent = v; } }
+}
+
+// ── Voice ──────────────────────────────────────────────────────────────────────
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert("Reconnaissance vocale indisponible. Utilise Chrome."); return; }
+  recognition = new SR(); recognition.lang = "fr-FR"; recognition.continuous = false; recognition.interimResults = false;
+  recognition.onresult = e => {
+    const ta = document.getElementById("repas-input");
+    ta.value = (ta.value ? ta.value + " " : "") + e.results[0][0].transcript;
+    updateRepasBtn(); setMic(false);
+  };
+  recognition.onerror = () => setMic(false);
+  recognition.onend = () => setMic(false);
+  recognition.start(); setMic(true);
+}
+function stopListening() { if (recognition) recognition.stop(); setMic(false); }
+function setMic(on) {
+  const b = document.getElementById("mic-btn");
+  b.classList.toggle("listening", on);
+  b.querySelector(".mic-icon").textContent = on ? "🔴" : "🎤";
+  b.querySelector(".mic-lbl").textContent = on ? "Écoute…" : "Vocal";
+}
+function updateRepasBtn() {
+  document.getElementById("repas-analyze-btn").disabled = !document.getElementById("repas-input").value.trim() && photos.length === 0;
+}
+
+// ── Health alerts ──────────────────────────────────────────────────────────────
+const ALERTS = [
+  { kw:["pain blanc","pain","baguette"], txt:"Pain blanc : index glycémique élevé — préférer pain complet.", lvl:"warning", source:"Table des IG — Université de Sydney", url:"https://www.glycemicindex.com" },
+  { kw:["sucre","soda","coca","jus","sirop","gâteau","biscuit","chocolat","bonbon","miel"], txt:"Sucre rapide : pic glycémique immédiat — à éviter avec pré-diabète.", lvl:"danger", source:"ADA — Nutrition et diabète", url:"https://www.diabetes.org/healthy-living/recipes-nutrition" },
+  { kw:["friture","frit","lardon","charcuterie","beurre","crème","fromage"], txt:"Graisses saturées : augmentent le LDL (mauvais cholestérol).", lvl:"warning", source:"HEART UK — Alimentation et cholestérol", url:"https://www.heartuk.org.uk/low-cholesterol-foods" },
+  { kw:["chips","frite"], txt:"Chips/frites : graisses saturées + sel — double impact cholestérol.", lvl:"danger", source:"Mayo Clinic — Cholestérol", url:"https://www.mayoclinic.org/diseases-conditions/high-blood-cholesterol/symptoms-causes/syc-20350800" },
+  { kw:["riz blanc","riz"], txt:"Riz blanc : IG modéré-élevé — préférer riz complet ou basmati.", lvl:"warning", source:"Table des IG — Université de Sydney", url:"https://www.glycemicindex.com" },
+  { kw:["raisin","raisins"], txt:"Raisins : sucres naturels élevés — limiter avec pré-diabète.", lvl:"warning", source:"ADA — Fruits et glycémie", url:"https://www.diabetes.org/healthy-living/recipes-nutrition/eating-well/fruit" },
+  { kw:["arachide","arachides","cacahuète"], txt:"Arachides nature : bonnes graisses. Salées : le sel aggrave la tension et le cholestérol.", lvl:"info", source:"AHA — Graisses et cœur", url:"https://www.heart.org/en/healthy-living/healthy-eating/eat-smart/fats/dietary-fats" },
+  { kw:["œuf","oeuf","oeufs","œufs"], txt:"Œufs : max 4–6 par semaine recommandé avec cholestérol élevé.", lvl:"info", source:"AHA — Recommandations œufs", url:"https://www.heart.org/en/news/2018/08/15/are-eggs-good-for-you-or-not" },
+  { kw:["eau","thé","tisane","infusion"], txt:"Excellente hydratation — continue ainsi.", lvl:"success", source:"OMS — Hydratation", url:"https://www.who.int" },
+  { kw:["légume","légumes","salade","tomate","carotte","haricot","brocoli","épinard"], txt:"Légumes : zéro restriction — excellent choix à chaque repas.", lvl:"success", source:"OMS — Alimentation saine", url:"https://www.who.int/news-room/fact-sheets/detail/healthy-diet" },
+  { kw:["poisson","sardine","thon","maquereau","saumon"], txt:"Poisson gras : oméga-3 qui augmentent le bon cholestérol (HDL).", lvl:"success", source:"AHA — Oméga-3 et cœur", url:"https://www.heart.org/en/healthy-living/healthy-eating/eat-smart/fats/fish-and-omega-3-fatty-acids" },
+];
+const AC = { danger:{bg:"#FFF0F0",border:"#FFD6D6",txt:"#C0392B",dot:"#E74C3C",icon:"⚠"}, warning:{bg:"#FFFBF0",border:"#FFE8B0",txt:"#9A6700",dot:"#F39C12",icon:"!"}, success:{bg:"#F0FFF4",border:"#C6F0D3",txt:"#1A7A3A",dot:"#27AE60",icon:"✓"}, info:{bg:"#F0F7FF",border:"#C8DEFF",txt:"#1A5FAB",dot:"#3498DB",icon:"i"} };
+
+function getAlerts(text) { const l = text.toLowerCase(); return ALERTS.filter(a => a.kw.some(k => l.includes(k))); }
+function renderAlerts(alerts) {
+  const sec = document.getElementById("alerts-section"), lst = document.getElementById("alerts-list");
+  if (!alerts.length) { sec.classList.add("hidden"); return; }
+  sec.classList.remove("hidden");
+  lst.innerHTML = alerts.map(a => {
+    const c = AC[a.lvl];
+    return `<div class="alert-item" style="background:${c.bg};border-color:${c.border}">
+      <div class="alert-header">
+        <div class="alert-dot" style="background:${c.dot}">${c.icon}</div>
+        <div>
+          <div class="alert-text" style="color:${c.txt}">${a.txt}</div>
+          <div class="alert-source">
+            <span class="source-tag" style="color:${c.txt}">${a.source}</span>
+            <a href="${a.url}" target="_blank" class="source-link">→ Voir la source</a>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Claude API ─────────────────────────────────────────────────────────────────
+async function callClaude(content, sys) {
+  if (!apiKey) { document.getElementById("apikey-section").classList.remove("hidden"); return {ok:false,error:"Clé API manquante."}; }
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 28000);
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST", signal:ctrl.signal,
+      headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:sys,messages:[{role:"user",content}]})
+    });
+    clearTimeout(to);
+    if (!r.ok) { const e = await r.json(); return {ok:false,error:e.error?.message||"Erreur API."}; }
+    const d = await r.json();
+    return {ok:true, result:JSON.parse((d.content?.[0]?.text||"{}").replace(/```json|```/g,"").trim())};
+  } catch(e) {
+    clearTimeout(to);
+    return {ok:false, error:e.name==="AbortError"?"Délai dépassé. Réessaie.":"Erreur réseau. Vérifie ta connexion."};
+  }
+}
+
+// ── Analyze repas ──────────────────────────────────────────────────────────────
+async function handleAnalyzeRepas() {
+  const text = document.getElementById("repas-input").value.trim();
+  if (!text && photos.length === 0) return;
+  const btn = document.getElementById("repas-analyze-btn");
+  btn.textContent = "⏳ Analyse en cours…"; btn.disabled = true;
+  document.getElementById("repas-error").classList.add("hidden");
+  document.getElementById("repas-result").classList.add("hidden");
+  document.getElementById("repas-success").classList.add("hidden");
+  currentAlertsRepas = getAlerts(text); renderAlerts(currentAlertsRepas);
+  const sys = `Tu es un assistant nutritionnel pour une personne ayant pré-diabète et cholestérol.
+Analyse ce repas et réponds UNIQUEMENT en JSON :
+{"repas":"Petit-déjeuner/Déjeuner/Dîner/Collation","aliments":"liste claire","quantite":"estimations","calories":"nombre entier","notes":"conseil santé court"}`;
+  let content = photos.length > 0
+    ? [...photos.map(p=>({type:"image",source:{type:"base64",media_type:p.mimeType,data:p.data}})), {type:"text",text:text?`Infos complémentaires : ${text}`:"Identifie et analyse ce repas."}]
+    : text;
+  const res = await callClaude(content, sys);
+  btn.textContent = "Analyser →"; btn.disabled = false;
+  if (!res.ok) { document.getElementById("repas-err-txt").textContent = "❌ "+res.error; document.getElementById("repas-error").classList.remove("hidden"); return; }
+  if (!text && res.result?.aliments) { currentAlertsRepas = getAlerts(res.result.aliments); renderAlerts(currentAlertsRepas); }
+  currentParsedRepas = res.result;
+  const rows = [["Repas",res.result.repas],["Aliments",res.result.aliments],["Quantité",res.result.quantite],["Calories",res.result.calories?`~${res.result.calories} kcal`:null],["Note santé",res.result.notes]].filter(([,v])=>v);
+  document.getElementById("repas-result-content").innerHTML = rows.map(([l,v])=>`<div class="result-row"><span class="result-lbl">${l}</span><span class="result-val">${v}</span></div>`).join("");
+  document.getElementById("repas-result").classList.remove("hidden");
+}
+
+function resetRepas() {
+  document.getElementById("repas-input").value = ""; photos = []; renderPhotoGrid();
+  currentParsedRepas = null; currentAlertsRepas = [];
+  ["repas-result","alerts-section","repas-error","repas-success"].forEach(id => document.getElementById(id).classList.add("hidden"));
+  updateRepasBtn();
+}
+
+function confirmRepas() {
+  const now = new Date();
+  const entry = {type:"repas", date:now.toLocaleDateString("fr-FR"), time:repasTimeOverride||now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}), parsed:currentParsedRepas, photos:photos.map(p=>p.preview), alerts:currentAlertsRepas.map(a=>a.txt)};
+  log.unshift(entry); if(log.length>80)log.pop();
+  try{localStorage.setItem("hl",JSON.stringify(log));}catch{}
+  document.getElementById("repas-result").classList.add("hidden");
+  document.getElementById("repas-success").classList.remove("hidden");
+  setTimeout(resetRepas, 2000);
+}
+
+// ── Sommeil ────────────────────────────────────────────────────────────────────
+function selectQuality(btn, val) {
+  document.querySelectorAll(".sq-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected"); currentSleepQuality = val;
+}
+
+function saveSommeil() {
+  const date = document.getElementById("sleep-date").value;
+  const bed = document.getElementById("sleep-bed").value;
+  const wake1 = document.getElementById("sleep-wake1").value;
+  const back = document.getElementById("sleep-back").value;
+  const up = document.getElementById("sleep-up").value;
+  const notes = document.getElementById("sleep-notes").value;
+  if (!bed || !up) { alert("Remplis au moins l'heure de coucher et de réveil final."); return; }
+  const entry = {type:"sommeil", date, bed, wake1, back, up, quality:currentSleepQuality, notes};
+  log.unshift(entry); if(log.length>80)log.pop();
+  try{localStorage.setItem("hl",JSON.stringify(log));}catch{}
+  document.getElementById("sleep-success").classList.remove("hidden");
+  setTimeout(() => document.getElementById("sleep-success").classList.add("hidden"), 2000);
+}
+
+// ── Mesures ────────────────────────────────────────────────────────────────────
+async function handleAnalyzeMesures() {
+  const text = document.getElementById("mesures-input").value.trim();
+  if (!text) return;
+  const btn = document.querySelector("#tab-mesures .analyze-btn");
+  btn.textContent = "⏳ Analyse en cours…"; btn.disabled = true;
+  document.getElementById("mesures-error").classList.add("hidden");
+  const sys = `Extrais les mesures corporelles. Réponds UNIQUEMENT en JSON :
+{"poids":"","taille":"","tourTaille":"","tourPoitrine":"","tourJambes":"","tourHanche":"","tourBras":"","tourMollet":""}`;
+  const res = await callClaude(text, sys);
+  btn.textContent = "Analyser →"; btn.disabled = false;
+  if (!res.ok) { document.getElementById("mesures-err-txt").textContent = "❌ "+res.error; document.getElementById("mesures-error").classList.remove("hidden"); return; }
+  currentParsedMesures = res.result;
+  const fields = [["Poids",res.result.poids,"kg"],["Taille",res.result.taille,"cm"],["T. taille",res.result.tourTaille,"cm"],["T. poitrine",res.result.tourPoitrine,"cm"],["T. jambes",res.result.tourJambes,"cm"],["T. hanche",res.result.tourHanche,"cm"],["T. bras",res.result.tourBras,"cm"],["T. mollet",res.result.tourMollet,"cm"]].filter(([,v])=>v);
+  document.getElementById("mesures-result-content").innerHTML = fields.map(([l,v,u])=>`<div class="mesure-cell"><div class="mc-lbl">${l}</div><div class="mc-val">${v}<span class="mc-unit">${u}</span></div></div>`).join("");
+  document.getElementById("mesures-result").classList.remove("hidden");
+}
+
+function confirmMesures() {
+  const now = new Date();
+  const entry = {type:"mesures", date:now.toLocaleDateString("fr-FR"), time:now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}), parsed:currentParsedMesures};
+  log.unshift(entry); if(log.length>80)log.pop();
+  try{localStorage.setItem("hl",JSON.stringify(log));}catch{}
+  document.getElementById("mesures-result").classList.add("hidden");
+  document.getElementById("mesures-success").classList.remove("hidden");
+  document.getElementById("mesures-input").value = "";
+  setTimeout(() => document.getElementById("mesures-success").classList.add("hidden"), 2000);
+}
+
+// ── Historique ─────────────────────────────────────────────────────────────────
+function renderHistory() {
+  const list = document.getElementById("history-list"), empty = document.getElementById("empty-state");
+  if (!log.length) { list.innerHTML=""; empty.classList.remove("hidden"); return; }
+  empty.classList.add("hidden");
+  list.innerHTML = log.map(e => {
+    if (e.type === "sommeil") {
+      const dur = e.bed && e.up ? calcSleepDur(e.bed, e.wake1, e.back, e.up) : "—";
+      return `<div class="history-card"><div class="history-body">
+        <div class="history-meta"><span class="pill">😴 Sommeil</span><span class="history-dt">${e.date}</span></div>
+        <div class="h-title">Coucher ${e.bed} · Réveil ${e.up}</div>
+        <div class="h-sub" style="color:#888">${dur} · ${e.quality||"Qualité non notée"}</div>
+        ${e.notes?`<div class="h-sub" style="margin-top:4px;font-style:italic">${e.notes}</div>`:""}
+      </div></div>`;
+    }
+    if (e.type === "repas") {
+      const photosHtml = e.photos?.length ? `<div class="history-photos" style="grid-template-columns:${e.photos.length===1?"1fr":"repeat(3,1fr)"}">${e.photos.map(src=>`<img src="${src}" style="height:${e.photos.length===1?'200px':'90px'}">`).join("")}</div>` : "";
+      return `<div class="history-card">${photosHtml}<div class="history-body">
+        <div class="history-meta"><span class="pill">🍽 Repas</span><span class="history-dt">${e.date} · ${e.time}</span></div>
+        <div class="h-title">${e.parsed?.repas||""}</div>
+        <div class="h-sub">${e.parsed?.aliments||""}</div>
+        ${e.parsed?.calories?`<div class="h-kcal">~${e.parsed.calories} kcal</div>`:""}
+      </div></div>`;
+    }
+    if (e.type === "mesures") {
+      const parts = [e.parsed?.poids&&`${e.parsed.poids} kg`, e.parsed?.tourTaille&&`T.taille ${e.parsed.tourTaille} cm`].filter(Boolean);
+      return `<div class="history-card"><div class="history-body">
+        <div class="history-meta"><span class="pill">📏 Mesures</span><span class="history-dt">${e.date} · ${e.time}</span></div>
+        <div class="h-sub" style="font-weight:700;color:#111">${parts.join("  ·  ")}</div>
+      </div></div>`;
+    }
+    return "";
+  }).join("");
+}
+
+function calcSleepDur(bed, wake1, back, up) {
+  try {
+    const toMins = t => { const [h,m] = t.split(":").map(Number); return h*60+m; };
+    let total = toMins(up) - toMins(bed);
+    if (total < 0) total += 24*60;
+    if (wake1 && back) { let gap = toMins(back) - toMins(wake1); if (gap < 0) gap += 24*60; total -= gap; }
+    const h = Math.floor(total/60), m = total%60;
+    return `~${h}h${m>0?m+"min":""} de sommeil`;
+  } catch { return "—"; }
+}
+
+// ── Ma Semaine ─────────────────────────────────────────────────────────────────
+async function generateWeekPlan() {
+  if (!apiKey) { document.getElementById("apikey-section").classList.remove("hidden"); return; }
+  const btn = document.getElementById("semaine-btn");
+  btn.textContent = "⏳ Analyse en cours…"; btn.disabled = true;
+  document.getElementById("semaine-result").classList.add("hidden");
+  document.getElementById("semaine-error").classList.add("hidden");
+
+  // Build context from last 7 days of log
+  const repas = log.filter(e => e.type === "repas").slice(0, 21);
+  const sommeil = log.filter(e => e.type === "sommeil").slice(0, 7);
+  const mesures = log.filter(e => e.type === "mesures").slice(0, 3);
+
+  const context = {
+    profil: "Femme, pré-diabète, cholestérol élevé, IMC 29.3, tour de taille 104cm, objectif: maigrir sur recommandation médicale.",
+    repas: repas.map(e => `${e.date} ${e.time} — ${e.parsed?.repas||""}: ${e.parsed?.aliments||e.raw||""} (~${e.parsed?.calories||"?"}kcal)`).join("\n"),
+    sommeil: sommeil.map(e => `${e.date}: coucher ${e.bed}, réveil ${e.up}, qualité ${e.quality||"non notée"}, ${e.notes||""}`).join("\n"),
+    mesures: mesures.map(e => `${e.date}: poids ${e.parsed?.poids||"?"}kg, taille ${e.parsed?.tourTaille||"?"}cm`).join("\n"),
+  };
+
+  const sys = `Tu es un coach santé expert en nutrition, diabète et cholestérol. Analyse l'historique d'une patiente et génère un plan personnalisé pour la semaine suivante. Réponds UNIQUEMENT en JSON strict :
+{
+  "alarmes": [{"niveau":"🚨 URGENT|⚠️ ATTENTION|ℹ️ INFO", "titre":"titre court", "detail":"explication claire et directe", "source":"référence scientifique courte"}],
+  "tendances": [{"type":"positif|negatif|neutre", "texte":"observation basée sur les données"}],
+  "planSemaine": {
+    "aFaire": ["action concrète 1", "action concrète 2"],
+    "aEviter": ["aliment ou comportement 1", "aliment ou comportement 2"],
+    "objectifCalories": "fourchette recommandée en kcal/jour",
+    "objectifSommeil": "recommandation personnalisée",
+    "objectifActivite": "recommandation activité physique semaine"
+  },
+  "menuSuggere": {
+    "petitDejeuner": "suggestion concrète adaptée",
+    "dejeuner": "suggestion concrète adaptée",
+    "diner": "suggestion concrète adaptée",
+    "collations": "suggestions collations saines"
+  },
+  "messageCoach": "message direct, honnête, motivant mais sans complaisance — max 3 phrases"
+}
+UNIQUEMENT le JSON, rien d'autre.`;
+
+  const res = await callClaude(
+    `Voici l'historique de la patiente cette semaine:\n\nPROFIL: ${context.profil}\n\nREPAS:\n${context.repas||"Aucun repas enregistré"}\n\nSOMMEIL:\n${context.sommeil||"Aucun sommeil enregistré"}\n\nMESURES:\n${context.mesures||"Aucune mesure enregistrée"}`,
+    sys
+  );
+
+  btn.textContent = "🔄 Actualiser le plan"; btn.disabled = false;
+
+  if (!res.ok) {
+    document.getElementById("semaine-err-txt").textContent = "❌ " + res.error;
+    document.getElementById("semaine-error").classList.remove("hidden");
+    return;
+  }
+
+  renderWeekPlan(res.result);
+  document.getElementById("semaine-result").classList.remove("hidden");
+}
+
+function renderWeekPlan(d) {
+  const alarmColors = { "🚨 URGENT": {bg:"#FFF0F0",border:"#FFD6D6",txt:"#C0392B",dot:"#E74C3C"}, "⚠️ ATTENTION": {bg:"#FFFBF0",border:"#FFE8B0",txt:"#9A6700",dot:"#F39C12"}, "ℹ️ INFO": {bg:"#F0F7FF",border:"#C8DEFF",txt:"#1A5FAB",dot:"#3498DB"} };
+  const tendanceColor = t => t==="positif"?"#1A7A3A":t==="negatif"?"#C0392B":"#666";
+  const tendanceIcon = t => t==="positif"?"↑":t==="negatif"?"↓":"→";
+
+  let html = "";
+
+  // Alarmes
+  if (d.alarmes?.length) {
+    html += `<div class="section-label" style="margin-bottom:10px">🔔 Alertes personnalisées</div>`;
+    d.alarmes.forEach(a => {
+      const c = alarmColors[a.niveau] || alarmColors["ℹ️ INFO"];
+      html += `<div style="background:${c.bg};border:1px solid ${c.border};border-radius:12px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:22px;height:22px;border-radius:50%;background:${c.dot};color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-weight:800">${a.niveau.split(" ")[0]}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:${c.txt};margin-bottom:3px">${a.titre}</div>
+            <div style="font-size:12px;color:${c.txt};line-height:1.5">${a.detail}</div>
+            ${a.source?`<div style="font-size:10px;color:${c.txt};opacity:0.7;margin-top:5px;font-weight:600">Source : ${a.source}</div>`:""}
+          </div>
+        </div>
+      </div>`;
+    });
+    html += `<div style="margin-bottom:20px"></div>`;
+  }
+
+  // Tendances
+  if (d.tendances?.length) {
+    html += `<div class="section-label" style="margin-bottom:10px">📈 Tendances observées</div>
+    <div style="background:#fff;border-radius:14px;border:1px solid #EFEFEF;padding:14px;margin-bottom:20px">`;
+    d.tendances.forEach(t => {
+      html += `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #F5F5F5">
+        <span style="font-size:16px;font-weight:800;color:${tendanceColor(t.type)};flex-shrink:0;width:16px">${tendanceIcon(t.type)}</span>
+        <span style="font-size:13px;color:#333;line-height:1.5">${t.texte}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Message coach
+  if (d.messageCoach) {
+    html += `<div style="background:#111;border-radius:14px;padding:16px;margin-bottom:20px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:#666;text-transform:uppercase;margin-bottom:8px">💬 Message de ton coach</div>
+      <div style="font-size:14px;color:#fff;line-height:1.7;font-style:italic">"${d.messageCoach}"</div>
+    </div>`;
+  }
+
+  // Plan semaine
+  if (d.planSemaine) {
+    const p = d.planSemaine;
+    html += `<div class="section-label" style="margin-bottom:10px">📋 Plan pour la semaine</div>
+    <div style="background:#fff;border-radius:14px;border:1px solid #EFEFEF;padding:16px;margin-bottom:20px">`;
+
+    if (p.objectifCalories) html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #F5F5F5"><span style="font-size:12px;font-weight:700;color:#BABABA;text-transform:uppercase;letter-spacing:0.5px">Calories/jour</span><span style="font-size:14px;font-weight:700;color:#111">${p.objectifCalories}</span></div>`;
+    if (p.objectifSommeil) html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #F5F5F5"><span style="font-size:12px;font-weight:700;color:#BABABA;text-transform:uppercase;letter-spacing:0.5px">Sommeil</span><span style="font-size:14px;font-weight:700;color:#111">${p.objectifSommeil}</span></div>`;
+    if (p.objectifActivite) html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0"><span style="font-size:12px;font-weight:700;color:#BABABA;text-transform:uppercase;letter-spacing:0.5px">Activité</span><span style="font-size:14px;font-weight:700;color:#111">${p.objectifActivite}</span></div>`;
+    html += `</div>`;
+
+    if (p.aFaire?.length) {
+      html += `<div style="background:#F0FFF4;border:1px solid #C6F0D3;border-radius:14px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#1A7A3A;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✅ À faire cette semaine</div>`;
+      p.aFaire.forEach(item => html += `<div style="display:flex;gap:8px;margin-bottom:7px"><span style="color:#27AE60;font-weight:800;flex-shrink:0">✓</span><span style="font-size:13px;color:#1A7A3A;line-height:1.5">${item}</span></div>`);
+      html += `</div>`;
+    }
+
+    if (p.aEviter?.length) {
+      html += `<div style="background:#FFF0F0;border:1px solid #FFD6D6;border-radius:14px;padding:14px;margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;color:#C0392B;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🚫 À éviter ou réduire</div>`;
+      p.aEviter.forEach(item => html += `<div style="display:flex;gap:8px;margin-bottom:7px"><span style="color:#E74C3C;font-weight:800;flex-shrink:0">×</span><span style="font-size:13px;color:#C0392B;line-height:1.5">${item}</span></div>`);
+      html += `</div>`;
+    }
+  }
+
+  // Menu suggéré
+  if (d.menuSuggere) {
+    const m = d.menuSuggere;
+    html += `<div class="section-label" style="margin-bottom:10px">🥗 Menu type suggéré</div>
+    <div style="background:#fff;border-radius:14px;border:1px solid #EFEFEF;padding:16px;margin-bottom:20px">`;
+    [["Petit-déjeuner", m.petitDejeuner, "☀️"], ["Déjeuner", m.dejeuner, "🕛"], ["Dîner", m.diner, "🌙"], ["Collations", m.collations, "🍎"]].filter(([,v])=>v).forEach(([l,v,ic]) => {
+      html += `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #F5F5F5">
+        <div style="font-size:11px;font-weight:700;color:#BABABA;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${ic} ${l}</div>
+        <div style="font-size:13px;color:#111;line-height:1.5">${v}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  document.getElementById("semaine-content").innerHTML = html;
+}
+
+function toggleDoc(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle("open");
+  header.querySelector(".doc-tag").style.transform = body.classList.contains("open") ? "rotate(180deg)" : "";
+}
+</script>
+</body>
+</html>
