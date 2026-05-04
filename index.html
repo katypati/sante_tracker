@@ -27,6 +27,27 @@ body { font-family: -apple-system,'SF Pro Display','Helvetica Neue',sans-serif; 
 .card { background:#fff; border-radius:16px; border:1px solid #EFEFEF; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden; }
 .hidden { display:none !important; }
 
+/* Objectives */
+.obj-card { background:#fff; border-radius:16px; border:1px solid #EFEFEF; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:16px; margin-bottom:12px; }
+.obj-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.obj-title { font-size:13px; font-weight:700; color:#111; }
+.obj-badge { font-size:11px; font-weight:700; padding:3px 10px; border-radius:100px; }
+.progress-bar-bg { background:#F0F0F0; border-radius:100px; height:10px; overflow:hidden; margin:8px 0; }
+.progress-bar-fill { height:100%; border-radius:100px; transition:width 0.6s ease; }
+.obj-stats { display:flex; justify-content:space-between; font-size:11px; color:#BABABA; font-weight:600; margin-top:4px; }
+.obj-input-row { display:flex; gap:8px; align-items:center; margin-top:12px; }
+.obj-input { flex:1; border:1.5px solid #E8E8E8; border-radius:10px; padding:10px 12px; font-family:inherit; font-size:14px; color:#111; background:#fff; outline:none; }
+.obj-input:focus { border-color:#111; }
+.obj-save-btn { background:#111; border:none; border-radius:10px; color:#fff; font-size:12px; font-weight:700; padding:10px 16px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+
+/* Mood */
+.mood-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.mood-btn { padding:10px 4px; border:1.5px solid #E8E8E8; border-radius:12px; background:#fff; cursor:pointer; font-family:inherit; text-align:center; transition:all 0.15s; }
+.mood-btn.selected { border-color:#111; background:#111; }
+.mood-btn .mood-emoji { font-size:22px; display:block; margin-bottom:3px; }
+.mood-btn .mood-lbl { font-size:9px; font-weight:600; color:#888; display:block; }
+.mood-btn.selected .mood-lbl { color:#fff; }
+
 /* Photo buttons */
 .photo-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .photo-btn { padding:14px 10px; background:#fff; border:1.5px solid #E8E8E8; border-radius:14px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:6px; width:100%; transition:border-color 0.15s; }
@@ -143,6 +164,7 @@ input[type=time] { border:1.5px solid #111; border-radius:8px; background:#fff; 
       <button class="tab-btn" data-tab="sommeil" onclick="switchTab('sommeil')">😴 Sommeil</button>
       <button class="tab-btn" data-tab="mesures" onclick="switchTab('mesures')">📏 Mesures</button>
       <button class="tab-btn" data-tab="historique" onclick="switchTab('historique')">📋 Historique</button>
+      <button class="tab-btn" data-tab="objectifs" onclick="switchTab('objectifs')">🎯 Objectifs</button>
       <button class="tab-btn" data-tab="semaine" onclick="switchTab('semaine')">📊 Ma Semaine</button>
       <button class="tab-btn" data-tab="docs" onclick="switchTab('docs')">📚 Docs</button>
     </div>
@@ -191,7 +213,7 @@ input[type=time] { border:1.5px solid #111; border-radius:8px; background:#fff; 
             <input id="r-time-in" type="time" class="hidden" oninput="repasTimeOverride=this.value;document.getElementById('r-time-val').textContent=this.value">
             <button class="time-edit-btn" onclick="toggleTimeEdit('r')">Modifier</button>
           </div>
-          <button class="mic-btn" id="mic-btn" onmousedown="startListening()" onmouseup="stopListening()" ontouchstart="startListening()" ontouchend="stopListening()">
+          <button class="mic-btn" id="mic-btn" onclick="toggleListening()">
             <span class="mic-icon">🎤</span><span class="mic-lbl">Vocal</span>
           </button>
         </div>
@@ -236,6 +258,16 @@ input[type=time] { border:1.5px solid #111; border-radius:8px; background:#fff; 
         <div class="sleep-field">
           <label>Réveil final</label>
           <input id="sleep-up" type="time" class="sleep-input">
+        </div>
+        <div class="sleep-field">
+          <label>Humeur au réveil</label>
+          <div class="mood-grid">
+            <button class="mood-btn" onclick="selectMood(this,'😴 Épuisé')"><span class="mood-emoji">😴</span><span class="mood-lbl">Épuisé</span></button>
+            <button class="mood-btn" onclick="selectMood(this,'😔 Fatigué')"><span class="mood-emoji">😔</span><span class="mood-lbl">Fatigué</span></button>
+            <button class="mood-btn" onclick="selectMood(this,'😐 Neutre')"><span class="mood-emoji">😐</span><span class="mood-lbl">Neutre</span></button>
+            <button class="mood-btn" onclick="selectMood(this,'🙂 Bien')"><span class="mood-emoji">🙂</span><span class="mood-lbl">Bien</span></button>
+            <button class="mood-btn" onclick="selectMood(this,'😄 Excellent')"><span class="mood-emoji">😄</span><span class="mood-lbl">Excellent</span></button>
+          </div>
         </div>
         <div class="sleep-field">
           <label>Qualité ressentie</label>
@@ -320,6 +352,91 @@ input[type=time] { border:1.5px solid #111; border-radius:8px; background:#fff; 
   <div id="tab-historique" class="hidden">
     <div id="history-list"></div>
     <div id="empty-state" class="hidden">Aucune entrée pour l'instant.</div>
+  </div>
+
+  <!-- ── OBJECTIFS ── -->
+  <div id="tab-objectifs" class="hidden">
+
+    <!-- Poids cible -->
+    <div class="section">
+      <div class="section-label">Objectif poids</div>
+      <div class="obj-card" id="poids-obj-card">
+        <div class="obj-header">
+          <span class="obj-title">⚖️ Poids cible</span>
+          <span class="obj-badge" id="poids-badge" style="background:#F0FFF4;color:#1A7A3A">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:6px">
+          <span>Départ : <strong id="poids-start-lbl" style="color:#111">85.65 kg</strong></span>
+          <span>Actuel : <strong id="poids-current-lbl" style="color:#111">—</strong></span>
+          <span>Cible : <strong id="poids-target-lbl" style="color:#1A7A3A">—</strong></span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="poids-bar" style="width:0%;background:#2ECC71"></div>
+        </div>
+        <div class="obj-stats">
+          <span id="poids-lost">— kg perdus</span>
+          <span id="poids-remaining">— kg restants</span>
+          <span id="poids-pct">0%</span>
+        </div>
+        <div class="obj-input-row">
+          <input id="poids-target-input" class="obj-input" type="number" step="0.5" placeholder="Poids cible en kg (ex: 75)">
+          <button class="obj-save-btn" onclick="savePoidsCible()">Définir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tour de taille cible -->
+    <div class="section">
+      <div class="section-label">Objectif tour de taille</div>
+      <div class="obj-card">
+        <div class="obj-header">
+          <span class="obj-title">📏 Tour de taille cible</span>
+          <span class="obj-badge" id="taille-badge" style="background:#F0F7FF;color:#1A5FAB">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:6px">
+          <span>Départ : <strong id="taille-start-lbl" style="color:#111">104 cm</strong></span>
+          <span>Actuel : <strong id="taille-current-lbl" style="color:#111">—</strong></span>
+          <span>Cible : <strong id="taille-target-lbl" style="color:#1A5FAB">—</strong></span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="taille-bar" style="width:0%;background:#3498DB"></div>
+        </div>
+        <div class="obj-stats">
+          <span id="taille-lost">— cm perdus</span>
+          <span id="taille-remaining">— cm restants</span>
+          <span id="taille-pct">0%</span>
+        </div>
+        <div class="obj-input-row">
+          <input id="taille-target-input" class="obj-input" type="number" step="1" placeholder="Tour de taille cible en cm (ex: 88)">
+          <button class="obj-save-btn" onclick="saveTailleCible()">Définir</button>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#1A5FAB;background:#F0F7FF;border-radius:8px;padding:8px 10px">
+          ℹ️ Objectif médical : en dessous de 88 cm pour une femme (risque cardio-métabolique réduit). Source : OMS
+        </div>
+      </div>
+    </div>
+
+    <!-- Humeur — historique -->
+    <div class="section">
+      <div class="section-label">Humeur — 7 derniers jours</div>
+      <div class="card" style="padding:14px" id="mood-history-card">
+        <div id="mood-history-content" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <div id="mood-empty" style="font-size:13px;color:#BABABA;text-align:center;padding:20px 0">
+          Aucune humeur enregistrée. Note la chaque matin dans l'onglet 😴 Sommeil.
+        </div>
+      </div>
+    </div>
+
+    <!-- Motivation -->
+    <div class="section">
+      <div class="section-label">Ma motivation</div>
+      <div class="card" style="padding:14px">
+        <textarea id="motivation-input" style="min-height:80px;font-size:13px;color:#555" placeholder="Pourquoi je veux atteindre ces objectifs ? (optionnel — pour te rappeler ta raison)"></textarea>
+        <button onclick="saveMotivation()" style="width:100%;background:#111;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:10px;cursor:pointer;font-family:inherit;margin-top:8px">Enregistrer</button>
+        <div id="motivation-saved" style="font-size:12px;color:#1A7A3A;text-align:center;margin-top:6px;display:none">✓ Enregistré</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ── MA SEMAINE ── -->
@@ -482,11 +599,12 @@ function saveApiKey() {
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 function switchTab(t) {
-  ["repas","sommeil","mesures","historique","semaine","docs"].forEach(id => {
+  ["repas","sommeil","mesures","historique","objectifs","semaine","docs"].forEach(id => {
     document.getElementById("tab-"+id).classList.toggle("hidden", id !== t);
     document.querySelector(`.tab-btn[data-tab="${id}"]`).classList.toggle("active", id === t);
   });
   if (t === "historique") renderHistory();
+  if (t === "objectifs") { updatePoidsObj(); updateTailleObj(); renderMoodHistory(); loadMotivation(); }
 }
 
 // ── Photos ─────────────────────────────────────────────────────────────────────
@@ -515,32 +633,54 @@ function toggleTimeEdit(prefix) {
 }
 
 // ── Voice ──────────────────────────────────────────────────────────────────────
+let isListeningActive = false;
+
+function toggleListening() {
+  if (isListeningActive) {
+    stopListening();
+  } else {
+    startListening();
+  }
+}
+
 function startListening() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { alert("Reconnaissance vocale indisponible. Utilise Chrome."); return; }
-  recognition = new SR(); recognition.lang = "fr-FR"; recognition.continuous = false; recognition.interimResults = false;
+  recognition = new SR();
+  recognition.lang = "fr-FR";
+  recognition.continuous = false;
+  recognition.interimResults = false;
   recognition.onresult = e => {
     const ta = document.getElementById("repas-input");
     ta.value = (ta.value ? ta.value + " " : "") + e.results[0][0].transcript;
-    updateRepasBtn(); setMic(false);
+    updateRepasBtn();
+    isListeningActive = false;
+    setMic(false);
   };
-  recognition.onerror = () => setMic(false);
-  recognition.onend = () => setMic(false);
-  recognition.start(); setMic(true);
+  recognition.onerror = () => { isListeningActive = false; setMic(false); };
+  recognition.onend = () => { isListeningActive = false; setMic(false); };
+  recognition.start();
+  isListeningActive = true;
+  setMic(true);
 }
-function stopListening() { if (recognition) recognition.stop(); setMic(false); }
+
+function stopListening() {
+  if (recognition) recognition.stop();
+  isListeningActive = false;
+  setMic(false);
+}
 function setMic(on) {
   const b = document.getElementById("mic-btn");
   b.classList.toggle("listening", on);
   b.querySelector(".mic-icon").textContent = on ? "🔴" : "🎤";
-  b.querySelector(".mic-lbl").textContent = on ? "Écoute…" : "Vocal";
+  b.querySelector(".mic-lbl").textContent = on ? "Appuie pour arrêter" : "Vocal";
 }
 function updateRepasBtn() {
   document.getElementById("repas-analyze-btn").disabled = !document.getElementById("repas-input").value.trim() && photos.length === 0;
 }
 
 // ── Health alerts ──────────────────────────────────────────────────────────────
-const SHEETS_URL = "https://script.google.com/macros/s/AKfycbwrLuiGhmMWJoQfHr48NlrozAHT0hPRHCzeCjArzNhRotexwLtaYUf4ER2wooeyR04W/exec";
+const SHEETS_URL = "https://script.google.com/macros/s/AKfycbxpqTj5ZMTaqxrF2RO24tKVZkur6pxuBvcvt9iVfY3Q_GsrOeQP1mvILhgWHClvFx7e/exec";
 
 async function syncToSheets(data) {
   try {
@@ -684,11 +824,11 @@ function saveSommeil() {
   const up = document.getElementById("sleep-up").value;
   const notes = document.getElementById("sleep-notes").value;
   if (!bed || !up) { alert("Remplis au moins l'heure de coucher et de réveil final."); return; }
-  const entry = {type:"sommeil", date, bed, wake1, back, up, quality:currentSleepQuality, notes};
+  const entry = {type:"sommeil", date, bed, wake1, back, up, quality:currentSleepQuality, mood:currentMood, notes};
   log.unshift(entry); if(log.length>80)log.pop();
   try{localStorage.setItem("hl",JSON.stringify(log));}catch{}
   // Sync to Google Sheets
-  syncToSheets({ type:"sommeil", date, bed, wake1, back, up, quality:currentSleepQuality, notes });
+  syncToSheets({ type:"sommeil", date, bed, wake1, back, up, duree: calcSleepDur(bed, wake1, back, up), mood:currentMood, quality:currentSleepQuality, notes });
   document.getElementById("sleep-success").classList.remove("hidden");
   setTimeout(() => document.getElementById("sleep-success").classList.add("hidden"), 2000);
 }
@@ -724,6 +864,11 @@ function confirmMesures() {
   setTimeout(() => document.getElementById("mesures-success").classList.add("hidden"), 2000);
 }
 
+function loadMotivation() {
+  const val = localStorage.getItem("motivation") || "";
+  if (val) document.getElementById("motivation-input").value = val;
+}
+
 // ── Historique ─────────────────────────────────────────────────────────────────
 function renderHistory() {
   const list = document.getElementById("history-list"), empty = document.getElementById("empty-state");
@@ -734,7 +879,7 @@ function renderHistory() {
       const dur = e.bed && e.up ? calcSleepDur(e.bed, e.wake1, e.back, e.up) : "—";
       return `<div class="history-card"><div class="history-body">
         <div class="history-meta"><span class="pill">😴 Sommeil</span><span class="history-dt">${e.date}</span></div>
-        <div class="h-title">Coucher ${e.bed} · Réveil ${e.up}</div>
+        <div class="h-title">Coucher ${e.bed} · Réveil ${e.up} ${e.mood ? "· " + e.mood : ""}</div>
         <div class="h-sub" style="color:#888">${dur} · ${e.quality||"Qualité non notée"}</div>
         ${e.notes?`<div class="h-sub" style="margin-top:4px;font-style:italic">${e.notes}</div>`:""}
       </div></div>`;
@@ -768,6 +913,108 @@ function calcSleepDur(bed, wake1, back, up) {
     const h = Math.floor(total/60), m = total%60;
     return `~${h}h${m>0?m+"min":""} de sommeil`;
   } catch { return "—"; }
+}
+
+let currentMood = "";
+
+function selectMood(btn, val) {
+  document.querySelectorAll(".mood-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+  currentMood = val;
+}
+
+function savePoidsCible() {
+  const val = parseFloat(document.getElementById("poids-target-input").value);
+  if (!val || val > 85.65) { alert("Entrez un poids cible inférieur à 85.65 kg"); return; }
+  localStorage.setItem("poidsCible", val);
+  updatePoidsObj();
+  syncObjectifs();
+}
+
+function saveTailleCible() {
+  const val = parseFloat(document.getElementById("taille-target-input").value);
+  if (!val || val > 104) { alert("Entrez un tour de taille cible inférieur à 104 cm"); return; }
+  localStorage.setItem("tailleCible", val);
+  updateTailleObj();
+  syncObjectifs();
+}
+
+function saveMotivation() {
+  const val = document.getElementById("motivation-input").value.trim();
+  if (val) localStorage.setItem("motivation", val);
+  document.getElementById("motivation-saved").style.display = "block";
+  setTimeout(() => document.getElementById("motivation-saved").style.display = "none", 2000);
+  syncObjectifs();
+}
+
+function syncObjectifs() {
+  const now = new Date();
+  syncToSheets({
+    type: "objectif",
+    date: now.toLocaleDateString("fr-FR"),
+    poidsCible: localStorage.getItem("poidsCible") || "",
+    tailleCible: localStorage.getItem("tailleCible") || "",
+    motivation: localStorage.getItem("motivation") || ""
+  });
+}
+
+function updatePoidsObj() {
+  const start = 85.65;
+  const cible = parseFloat(localStorage.getItem("poidsCible") || 0);
+  if (!cible) return;
+  // Get latest weight from log
+  const mesureEntries = log.filter(e => e.type === "mesures" && e.parsed?.poids);
+  const current = mesureEntries.length ? parseFloat(mesureEntries[0].parsed.poids) : start;
+  const totalToLose = start - cible;
+  const lost = Math.max(0, start - current);
+  const pct = Math.min(100, Math.round((lost / totalToLose) * 100));
+  const remaining = Math.max(0, current - cible).toFixed(1);
+
+  document.getElementById("poids-target-input").value = cible;
+  document.getElementById("poids-target-lbl").textContent = cible + " kg";
+  document.getElementById("poids-current-lbl").textContent = current + " kg";
+  document.getElementById("poids-bar").style.width = pct + "%";
+  document.getElementById("poids-pct").textContent = pct + "%";
+  document.getElementById("poids-lost").textContent = lost.toFixed(1) + " kg perdus";
+  document.getElementById("poids-remaining").textContent = remaining + " kg restants";
+  document.getElementById("poids-badge").textContent = pct + "%";
+  document.getElementById("poids-badge").style.background = pct >= 100 ? "#F0FFF4" : pct > 50 ? "#FFFBF0" : "#FFF0F0";
+  document.getElementById("poids-badge").style.color = pct >= 100 ? "#1A7A3A" : pct > 50 ? "#9A6700" : "#C0392B";
+}
+
+function updateTailleObj() {
+  const start = 104;
+  const cible = parseFloat(localStorage.getItem("tailleCible") || 0);
+  if (!cible) return;
+  const mesureEntries = log.filter(e => e.type === "mesures" && e.parsed?.tourTaille);
+  const current = mesureEntries.length ? parseFloat(mesureEntries[0].parsed.tourTaille) : start;
+  const totalToLose = start - cible;
+  const lost = Math.max(0, start - current);
+  const pct = Math.min(100, Math.round((lost / totalToLose) * 100));
+  const remaining = Math.max(0, current - cible).toFixed(1);
+
+  document.getElementById("taille-target-input").value = cible;
+  document.getElementById("taille-target-lbl").textContent = cible + " cm";
+  document.getElementById("taille-current-lbl").textContent = current + " cm";
+  document.getElementById("taille-bar").style.width = pct + "%";
+  document.getElementById("taille-pct").textContent = pct + "%";
+  document.getElementById("taille-lost").textContent = lost.toFixed(1) + " cm perdus";
+  document.getElementById("taille-remaining").textContent = remaining + " cm restants";
+  document.getElementById("taille-badge").textContent = pct + "%";
+}
+
+function renderMoodHistory() {
+  const moods = log.filter(e => e.type === "sommeil" && e.mood).slice(0, 7);
+  const container = document.getElementById("mood-history-content");
+  const empty = document.getElementById("mood-empty");
+  if (!moods.length) { container.innerHTML = ""; empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  container.innerHTML = moods.map(e => `
+    <div style="flex:1;min-width:50px;text-align:center;background:#F8F8F8;border-radius:10px;padding:8px 4px">
+      <div style="font-size:20px">${e.mood.split(" ")[0]}</div>
+      <div style="font-size:9px;color:#888;font-weight:600;margin-top:2px">${e.date.split("/").slice(0,2).join("/")}</div>
+    </div>
+  `).join("");
 }
 
 // ── Ma Semaine ─────────────────────────────────────────────────────────────────
