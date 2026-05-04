@@ -355,11 +355,17 @@ input[type=time] {
 
     <div class="section">
       <div class="section-label">Description (optionnel si photo)</div>
-      <div class="card"><textarea id="repas-input" rows="3" placeholder="Ex : 2 œufs sur le plat, pain, thé menthe sans sucre, eau..." oninput="updateRepasBtn()"></textarea></div>
+      <div class="card" style="position:relative">
+        <textarea id="repas-input" rows="3" placeholder="Tape ici ou utilise le micro 🎤 du clavier iOS..." oninput="updateRepasBtn()"></textarea>
+        <div style="padding:0 14px 12px;display:flex;align-items:center;gap:8px;border-top:1px solid #F5F5F5">
+          <span style="font-size:18px">🎤</span>
+          <span style="font-size:12px;color:#BABABA;line-height:1.4">Appuie sur le <strong style="color:#111">micro 🎤</strong> de ton clavier pour dicter. Sur iPhone : maintiens la barre espace ou active la dictée dans Réglages → Général → Clavier.</span>
+        </div>
+      </div>
     </div>
 
     <div class="section">
-      <div class="section-label">Heure &amp; vocal</div>
+      <div class="section-label">Heure</div>
       <div class="card">
         <div class="time-row">
           <div class="time-left">
@@ -368,9 +374,6 @@ input[type=time] {
             <input id="r-time-in" type="time" class="hidden" oninput="repasTimeOverride=this.value;document.getElementById('r-time-val').textContent=this.value">
             <button class="time-edit-btn" onclick="toggleTimeEdit('r')">Modifier</button>
           </div>
-          <button class="mic-btn" id="mic-btn" onclick="toggleListening()">
-            <span class="mic-icon">🎤</span><span class="mic-lbl">Vocal</span>
-          </button>
         </div>
       </div>
     </div>
